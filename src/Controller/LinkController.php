@@ -3,30 +3,33 @@
 namespace App\Controller;
 
 use App\Entity\Link;
+use Endroid\QrCode\QrCode;
+use Endroid\QrCode\Logo\Logo;
+use Endroid\QrCode\Color\Color;
+use Endroid\QrCode\Label\Label;
 use App\Repository\LinkRepository;
+use Endroid\QrCode\Writer\PngWriter;
+use Endroid\QrCode\Encoding\Encoding;
+use Endroid\QrCode\Label\Font\NotoSans;
+use Doctrine\ORM\EntityManagerInterface;
+use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Serializer\SerializerInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Endroid\QrCode\Color\Color;
-use Endroid\QrCode\Encoding\Encoding;
+use Symfony\Component\Validator\Validator\ValidatorInterface;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
+use Symfony\Component\Serializer\Normalizer\AbstractNormalizer;
 use Endroid\QrCode\ErrorCorrectionLevel\ErrorCorrectionLevelLow;
-use Endroid\QrCode\QrCode;
-use Endroid\QrCode\Label\Label;
-use Endroid\QrCode\Logo\Logo;
-use Endroid\QrCode\Writer\PngWriter;
-use Endroid\QrCode\Label\Font\NotoSans;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
  
 class LinkController extends AbstractController
 {
-    #[Route('/link', name: 'app_link')]
-    public function index(): JsonResponse
+    #[Route('/api/links/{link}', name: 'link.get' , methods: ["GET"])]
+    public function getLink(Link $link, SerializerInterface $serializer): JsonResponse
     {
-        return $this->json([
-            'message' => 'Welcome to your new controller!',
-            'path' => 'src/Controller/LinkController.php',
-        ]);
+        $jsonLinks =  $serializer->serialize($link, 'json', ["groups" => "default"] );
+        return new JsonResponse($jsonLinks, Response::HTTP_OK, [],  true); 
     }
         #[Route('/api/links', name: 'link.getAll', methods: ["GET"])]
     public function getAllLinks(LinkRepository $repository, SerializerInterface $serializer): JsonResponse
@@ -36,7 +39,24 @@ class LinkController extends AbstractController
         $jsonLinks =  $serializer->serialize($links, 'json',["groups" => "default"] );
         return new JsonResponse($jsonLinks, Response::HTTP_OK, [],  true); 
     }   
+    #[Route("/api/links", name:'link.create', methods: ["POST"])]
+    public function createLink(Request $request,ValidatorInterface  $validator, LinkRepository $linkRepository, SerializerInterface $serializer, EntityManagerInterface $entityManager, UrlGeneratorInterface $urlGenerator): JsonResponse {
 
+        $link = $serializer->deserialize($request->getContent(),Link::class, 'json');
+        $link->setCreatedAt(new \DateTime())
+            ->setUpdatedAt(new \DateTime())
+            ->setStatus("on");
+        $errors =  $validator->validate($link);
+        if($errors->count()){
+            return new JsonResponse($serializer->serialize($errors, "json"), JsonResponse::HTTP_BAD_REQUEST, [], true );
+        }
+        $entityManager->persist($link);
+        $entityManager->flush();
+
+        $jsonLink = $serializer->serialize($link, "json" , ["groups" => "default"]);
+        $location = $urlGenerator->generate("link.get", ["link" => $link->getId()], UrlGeneratorInterface::ABSOLUTE_URL);
+        return new JsonResponse($jsonLink, Response::HTTP_CREATED, ["Location" => $location],  true);
+    }
     #[Route('/qr-codes/{link}', name: 'link.qrCode')]
     public function qrcodes(Link $link): Response
     {
@@ -83,5 +103,17 @@ class LinkController extends AbstractController
         )->getDataUri();
  
         return $this->render('qr_code_generator/index.html.twig', $qrCodes);
+    }
+
+    #[Route("/api/links/{link}", name:"link.update", methods:["PUT", "PATCH"])]
+    public function updateLink(Link $link, Request $request, SerializerInterface $serializer, EntityManagerInterface $entityManager, ):JsonResponse {
+        $updatedLink = $serializer->deserialize($request->getContent(), Link::class, "json",[AbstractNormalizer::OBJECT_TO_POPULATE => $link]);
+
+        $updatedLink->setUpdatedAt(new \DateTime());
+        
+        $entityManager->persist($updatedLink);
+        $entityManager->flush();
+        
+        return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
     }
 }

@@ -88,23 +88,16 @@ class SongController extends AbstractController
     #[Route("/api/songs/{song}", name:"song.update", methods:["PUT", "PATCH"])]
     public function updateSong(Song $song, Request $request,LinkRepository $linkRepository, SerializerInterface $serializer, EntityManagerInterface $entityManager, ):JsonResponse {
         $updatedSong = $serializer->deserialize($request->getContent(), Song::class, "json",[AbstractNormalizer::OBJECT_TO_POPULATE => $song]);
-                $idLinks = $request->toArray()["idLink"];
-            $links = [];
-            foreach($idLinks as $idLink){
-                $links[] = $linkRepository->find($idLink);
-            }
-            $song->setLink($links);
+        $idLinks = $request->toArray()["idLink"];
+        $links = [];
+        foreach($idLinks as $idLink){
+            $links[] = $linkRepository->find($idLink);
+        }
+        $song->setLink($links);
         $updatedSong->setUpdatedAt(new DateTime());
         
         $entityManager->persist($updatedSong);
         $entityManager->flush();
-
-
-
-
-        
-        
-        
         
         return new JsonResponse(null, JsonResponse::HTTP_NO_CONTENT);
     }

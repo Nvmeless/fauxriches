@@ -9,7 +9,7 @@ use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\ArrayCollection;
 use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Annotation\Groups;
-
+use Symfony\Component\Validator\Constraints as Assert;
 #[ORM\Entity(repositoryClass: LinkRepository::class)]
 class Link
 {
@@ -21,10 +21,13 @@ class Link
 
     #[ORM\Column(length: 255)]
     #[Groups(["default"])]
+    #[Assert\NotBlank(message:"Votre Lien doit avoir une URL")]
+    #[Assert\Url(
+        message: 'The url {{ value }} is not a valid url',
+    )]
     private ?string $url = null;
 
-    #[Groups(["default"])]
-    private ?string $qrCode = null;
+
     
     #[ORM\Column(length: 25)]
     private ?string $status = null;
@@ -53,16 +56,7 @@ class Link
         return $this->id;
     }
 
-    public function getQrCode(): ?string {
 
-        return $this->qrCode;
-    }
-
-    public function setQrCode( string $qrCode):static {
-
-        $this->qrCode = $qrCode;
-        return $this;
-    }
     public function getUrl(): ?string
     {
 
