@@ -7,6 +7,7 @@ use Doctrine\ORM\Mapping as ORM;
 use App\Repository\LinkRepository;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\Common\Collections\ArrayCollection;
+use Symfony\Component\Routing\Generator\UrlGeneratorInterface;
 use Symfony\Component\Serializer\Annotation\Groups;
 
 #[ORM\Entity(repositoryClass: LinkRepository::class)]
@@ -22,6 +23,9 @@ class Link
     #[Groups(["default"])]
     private ?string $url = null;
 
+    #[Groups(["default"])]
+    private ?string $qrCode = null;
+    
     #[ORM\Column(length: 25)]
     private ?string $status = null;
 
@@ -41,6 +45,7 @@ class Link
     public function __construct()
     {
         $this->song = new ArrayCollection();
+        // $this->setQrCode();
     }
 
     public function getId(): ?int
@@ -48,8 +53,20 @@ class Link
         return $this->id;
     }
 
+    public function getQrCode(): ?string {
+
+        return $this->qrCode;
+    }
+
+    public function setQrCode( string $qrCode):static {
+
+        $this->qrCode = $qrCode;
+        return $this;
+    }
     public function getUrl(): ?string
     {
+
+
         return $this->url;
     }
 
